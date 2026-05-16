@@ -23,6 +23,10 @@ except ImportError:
 
 app = Flask(__name__)
 
+# Ensure output directories exist (important on fresh Render disk mounts)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(COVER_LETTERS_DIR, exist_ok=True)
+
 _scrape_state = {"running": False, "last_run": None, "last_count": 0, "error": None}
 _state_lock = threading.Lock()
 
