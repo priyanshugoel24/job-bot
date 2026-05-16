@@ -90,7 +90,7 @@ def print_banner():
     print("\n" + "=" * 60)
     print("  JOB BOT — Priyanshu Goel | DTU CS 2026")
     print(f"  Target: {PROFILE['target_ctc_min']}+ LPA | SDE-1 / SWE")
-    print(f"  Locations: {', '.join(PROFILE['locations'][:4])}")
+    print(f"  Locations: {', '.join(SEARCH_FILTERS['locations'][:4])}")
     print("=" * 60 + "\n")
 
 

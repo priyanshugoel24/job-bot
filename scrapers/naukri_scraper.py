@@ -57,7 +57,10 @@ class NaukriScraper:
         opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                           "AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/124.0.0.0 Safari/537.36")
-        self.driver = webdriver.Chrome(options=opts)
+        from selenium.webdriver.chrome.service import Service
+        from webdriver_manager.chrome import ChromeDriverManager
+        service = Service(ChromeDriverManager().install())
+        self.driver = webdriver.Chrome(service=service, options=opts)
         self.wait = WebDriverWait(self.driver, 15)
         log.info("Chrome driver started.")
 

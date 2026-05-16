@@ -20,7 +20,8 @@ import time
 import os
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -72,17 +73,17 @@ class ApplicationGenerator:
                 "Get your FREE key (no card needed) at: https://aistudio.google.com/app/apikey\n"
                 "Free tier: 1500 requests/day — plenty for this bot."
             )
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(MODEL)
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
         self.profile_context = _build_profile_context()
         log.info(f"Gemini AI ready ({MODEL})")
 
     def _call_gemini(self, prompt: str, max_retries: int = 3) -> str:
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
+                response = self.client.models.generate_content(
+                    model=MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
                         temperature=0.7,
                         max_output_tokens=800,
                     )
