@@ -29,7 +29,7 @@ from config import GEMINI_API_KEY, PROFILE
 
 log = logging.getLogger("AIGenerator")
 
-MODEL = "gemini-1.5-flash"   # Free tier model — fast and high quality
+MODEL = "gemini-2.0-flash"   # Free tier default (2025)
 
 
 def _build_profile_context() -> str:
@@ -91,14 +91,16 @@ class ApplicationGenerator:
                 return response.text.strip()
             except Exception as e:
                 err = str(e)
-                if "429" in err or "quota" in err.lower() or "rate" in err.lower():
+                if "429" in err or "quota" in err.lower():
                     wait = 60 if attempt == 0 else 120
                     log.warning(f"Rate limit — waiting {wait}s (attempt {attempt+1}/{max_retries})")
                     time.sleep(wait)
+                elif "404" in err:
+                    raise RuntimeError(f"Model not found — check model name: {err}")
                 else:
                     log.error(f"Gemini API error: {e}")
                     raise
-        raise RuntimeError("Gemini API failed after retries — try again in a minute.")
+        raise RuntimeError("Gemini API rate-limited after retries — try again in a minute.")
 
     def generate_cover_letter(self, job: dict, emphasis: str = "") -> str:
         jd_section = f"\nJOB DESCRIPTION:\n{job.get('description', '')[:1500]}" if job.get("description") else ""
