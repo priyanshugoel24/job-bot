@@ -1,0 +1,7 @@
+# .gitignore
+config.py          ← contains your passwords + API key
+output/
+__pycache__/
+*.pyc
+chromedriver
+chromedriver.exe
