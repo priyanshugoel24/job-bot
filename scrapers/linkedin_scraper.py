@@ -75,6 +75,25 @@ class LinkedInScraper:
             self.driver = None
 
     # ── Login ─────────────────────────────────────────────────────────────────
+    def _dismiss_overlays(self):
+        """Dismiss cookie banners and consent dialogs before interacting with forms."""
+        overlay_selectors = [
+            "button[action-type='ACCEPT']",
+            "button[data-tracking-control-name='cookie-policy-accept']",
+            "button.artdeco-global-alert__action",
+            "button[aria-label='Accept cookies']",
+            "button[aria-label='Dismiss']",
+        ]
+        for sel in overlay_selectors:
+            try:
+                btn = self.driver.find_element(By.CSS_SELECTOR, sel)
+                btn.click()
+                time.sleep(0.5)
+                log.info(f"Dismissed overlay: {sel}")
+                break
+            except NoSuchElementException:
+                pass
+
     def _login(self) -> bool:
         if not self.email or not self.password:
             log.error("LinkedIn credentials not set in config.py")
@@ -82,14 +101,55 @@ class LinkedInScraper:
 
         log.info("Logging in to LinkedIn...")
         self.driver.get(self.LOGIN_URL)
-        time.sleep(2)
+        time.sleep(3)  # Let the page settle before touching anything
+
+        self._dismiss_overlays()
+
+        # Try multiple selectors for the email field
+        email_selectors = [
+            (By.ID, "username"),
+            (By.CSS_SELECTOR, "input[name='session_key']"),
+            (By.CSS_SELECTOR, "input[autocomplete='username']"),
+        ]
+        email_field = None
+        for by, sel in email_selectors:
+            try:
+                email_field = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((by, sel))
+                )
+                log.info(f"Found email field via: {sel}")
+                break
+            except TimeoutException:
+                continue
+
+        if email_field is None:
+            self.driver.save_screenshot("debug_linkedin.png")
+            log.error("Timed out waiting for login form. Screenshot saved: debug_linkedin.png")
+            return False
 
         try:
-            email_field = self.wait.until(EC.presence_of_element_located((By.ID, "username")))
             email_field.clear()
             email_field.send_keys(self.email)
 
-            pass_field = self.driver.find_element(By.ID, "password")
+            # Password field mirrors the same strategy
+            pass_selectors = [
+                (By.ID, "password"),
+                (By.CSS_SELECTOR, "input[name='session_password']"),
+                (By.CSS_SELECTOR, "input[type='password']"),
+            ]
+            pass_field = None
+            for by, sel in pass_selectors:
+                try:
+                    pass_field = self.driver.find_element(by, sel)
+                    break
+                except NoSuchElementException:
+                    continue
+
+            if pass_field is None:
+                self.driver.save_screenshot("debug_linkedin.png")
+                log.error("Could not find password field. Screenshot saved: debug_linkedin.png")
+                return False
+
             pass_field.clear()
             pass_field.send_keys(self.password)
             pass_field.send_keys(Keys.RETURN)
@@ -105,11 +165,13 @@ class LinkedInScraper:
                 log.info("Login successful.")
                 return True
             else:
-                log.error(f"Login may have failed. Current URL: {self.driver.current_url}")
+                self.driver.save_screenshot("debug_linkedin.png")
+                log.error(f"Login may have failed. URL: {self.driver.current_url} — Screenshot saved: debug_linkedin.png")
                 return False
 
-        except TimeoutException:
-            log.error("Timed out waiting for login form.")
+        except Exception as e:
+            self.driver.save_screenshot("debug_linkedin.png")
+            log.error(f"Login error: {e} — Screenshot saved: debug_linkedin.png")
             return False
 
     # ── Search & Scrape ───────────────────────────────────────────────────────

@@ -75,19 +75,54 @@ class NaukriScraper:
             return True  # Naukri allows some scraping without login
 
         log.info("Logging in to Naukri...")
+        # Navigate directly to the login page (avoids Google OAuth redirect)
         self.driver.get(self.LOGIN_URL)
-        time.sleep(2)
+        time.sleep(3)
+
+        # Try the actual Naukri field IDs first, then fall back to placeholder selectors
+        email_selectors = [
+            (By.ID, "usernameField"),
+            (By.CSS_SELECTOR, "input[placeholder='Enter your active Email ID / Username']"),
+            (By.CSS_SELECTOR, "input[type='text'][id*='username']"),
+        ]
+        email_field = None
+        for by, sel in email_selectors:
+            try:
+                email_field = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((by, sel))
+                )
+                log.info(f"Found Naukri email field via: {sel}")
+                break
+            except TimeoutException:
+                continue
+
+        if email_field is None:
+            self.driver.save_screenshot("debug_naukri.png")
+            log.error("Timed out waiting for Naukri login form. Screenshot saved: debug_naukri.png")
+            return False
 
         try:
-            email_field = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder='Enter your active Email ID / Username']"))
-            )
             email_field.clear()
             email_field.send_keys(self.email)
 
-            pass_field = self.driver.find_element(
-                By.CSS_SELECTOR, "input[placeholder='Enter your password']"
-            )
+            pass_selectors = [
+                (By.ID, "passwordField"),
+                (By.CSS_SELECTOR, "input[placeholder='Enter your password']"),
+                (By.CSS_SELECTOR, "input[type='password']"),
+            ]
+            pass_field = None
+            for by, sel in pass_selectors:
+                try:
+                    pass_field = self.driver.find_element(by, sel)
+                    break
+                except NoSuchElementException:
+                    continue
+
+            if pass_field is None:
+                self.driver.save_screenshot("debug_naukri.png")
+                log.error("Could not find Naukri password field. Screenshot saved: debug_naukri.png")
+                return False
+
             pass_field.clear()
             pass_field.send_keys(self.password)
             pass_field.send_keys(Keys.RETURN)
@@ -101,8 +136,9 @@ class NaukriScraper:
             log.info("Naukri login complete.")
             return True
 
-        except TimeoutException:
-            log.error("Timed out waiting for Naukri login form.")
+        except Exception as e:
+            self.driver.save_screenshot("debug_naukri.png")
+            log.error(f"Naukri login error: {e} — Screenshot saved: debug_naukri.png")
             return False
 
     def _extract_lpa(self, salary_text: str) -> Optional[int]:
@@ -155,7 +191,7 @@ class NaukriScraper:
 
         log.info(f"  Fetching: {role} in {location}, page {page}")
         self.driver.get(url)
-        time.sleep(3)
+        time.sleep(3)  # Wait for page to load before scraping
 
         # Scroll to trigger lazy load
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
@@ -165,9 +201,22 @@ class NaukriScraper:
 
         jobs = []
 
-        # Job cards
-        cards = self.driver.find_elements(By.CSS_SELECTOR, "article.jobTuple, div.srp-jobtuple-wrapper")
-        log.info(f"  Found {len(cards)} cards.")
+        # Try multiple card selectors — Naukri's DOM varies across page types
+        card_selectors = [
+            "div.srp-jobtuple-wrapper",
+            "article.jobTuple",
+            "div[class*='jobTuple']",
+            "article[class*='jobTuple']",
+        ]
+        cards = []
+        for sel in card_selectors:
+            cards = self.driver.find_elements(By.CSS_SELECTOR, sel)
+            if cards:
+                log.info(f"  Found {len(cards)} cards via: {sel}")
+                break
+        if not cards:
+            self.driver.save_screenshot("debug_naukri.png")
+            log.warning("  No job cards found. Screenshot saved: debug_naukri.png")
 
         for card in cards:
             try:
