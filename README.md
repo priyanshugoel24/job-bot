@@ -151,19 +151,35 @@ The AI generates letters that:
 
 ---
 
-## Running on a schedule (optional)
+## Running the daily scheduler
 
-To run the scraper daily automatically:
-
-**Linux/Mac (cron):**
 ```bash
-# Run every day at 9am
-crontab -e
-0 9 * * * cd /path/to/job_bot && python main.py --scrape-only >> output/scrape_log.txt 2>&1
+python3 scheduler.py
 ```
 
-**Windows (Task Scheduler):**
-Create a task that runs `python main.py --scrape-only` daily.
+Runs forever in the foreground. Every day at 8:00 AM it will:
+1. Scrape all platforms (LinkedIn / Naukri / Instahyre / Cutshort)
+2. Diff results against the previously saved `output/jobs.json`
+3. Generate cover letters for the top 5 new jobs
+4. Email a digest to `priyanshugoel24@gmail.com`
+
+**To run in background on Mac** (keeps running after the terminal closes):
+```bash
+nohup python3 scheduler.py > output/scheduler.log 2>&1 &
+```
+
+**To test immediately** (triggers the full job without waiting for 8 AM):
+```bash
+python3 scheduler.py --test
+```
+
+### Email setup (required for digest emails)
+Open `config.py` and fill in:
+```python
+GMAIL_SENDER = "you@gmail.com"      # The Gmail address that sends the email
+GMAIL_APP_PASSWORD = "xxxx xxxx"    # Gmail App Password — NOT your regular password
+```
+Get an App Password at **myaccount.google.com/apppasswords** (requires 2FA enabled).
 
 ---
 

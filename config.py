@@ -169,9 +169,19 @@ CREDENTIALS = {
 GEMINI_API_KEY = "AIzaSyATNGYAdwNOOSonISZLoTdyDcwkIPPC18U"  # Fill: your free Gemini API key from aistudio.google.com
 
 # ─────────────────────────────────────────
+# EMAIL NOTIFICATIONS
+# Get App Password: myaccount.google.com/apppasswords
+# Enable 2FA first, then create an app password for "Mail"
+# ─────────────────────────────────────────
+GMAIL_SENDER = ""        # Gmail address to send FROM
+GMAIL_APP_PASSWORD = ""  # Gmail App Password (not regular password)
+NOTIFY_EMAIL = "priyanshugoel24@gmail.com"
+
+# ─────────────────────────────────────────
 # OUTPUT PATHS
 # ─────────────────────────────────────────
 OUTPUT_DIR = "output"
 JOBS_FILE = "output/jobs.json"
 APPLICATIONS_FILE = "output/applications.json"
 COVER_LETTERS_DIR = "output/cover_letters"
+SCHEDULER_LOG = "output/scheduler.log"
