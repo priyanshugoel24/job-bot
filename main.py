@@ -340,12 +340,19 @@ Examples:
     parser.add_argument("--top", type=int, default=10, help="Number of top jobs to apply to (default: 10)")
     parser.add_argument("--sources", type=str, default="li,nk,ih,cs",
                         help="Comma-separated sources: li=LinkedIn, nk=Naukri, ih=Instahyre, cs=Cutshort")
+    parser.add_argument("--dashboard", action="store_true", help="Launch the web dashboard UI at http://localhost:5000")
 
     args = parser.parse_args()
     print_banner()
 
     source_map = {"li": "linkedin", "nk": "naukri", "ih": "instahyre", "cs": "cutshort"}
     sources = [source_map[s.strip()] for s in args.sources.split(",") if s.strip() in source_map]
+
+    if args.dashboard:
+        from dashboard.app import app
+        print("\n  Job Bot Dashboard  →  http://localhost:5001\n")
+        app.run(debug=False, port=5001, host="0.0.0.0")
+        return
 
     if args.status:
         print_status()
