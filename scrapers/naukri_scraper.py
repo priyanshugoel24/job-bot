@@ -178,20 +178,26 @@ class NaukriScraper:
 
     def _scrape_listing_page(self, role: str, location: str, page: int = 1) -> list:
         """Scrape one page of Naukri search results."""
-        role_slug = role.lower().replace(" ", "-")
-        loc_slug = location.lower().replace(" ", "-")
+        role_encoded = role.replace(" ", "+")
+        loc_encoded = location.replace(" ", "+")
 
-        # Naukri URL: salary 20Lac+ = 2000000, experience 0-1 years
+        # Use the query-param search URL — slug-based URLs trigger React errors
         url = (
-            f"https://www.naukri.com/{role_slug}-jobs-in-{loc_slug}"
-            f"?experience=0&salary=2000000&wfhType=0%2C2"
+            f"https://www.naukri.com/jobs?k={role_encoded}&l={loc_encoded}"
+            f"&experience=0-1"
         )
         if page > 1:
             url += f"&pageNo={page}"
 
         log.info(f"  Fetching: {role} in {location}, page {page}")
         self.driver.get(url)
-        time.sleep(3)  # Wait for page to load before scraping
+        time.sleep(4)  # Naukri SPA needs more time to hydrate
+
+        # If the page errored, refresh once before giving up
+        if "Something went wrong" in self.driver.page_source or "error loading" in self.driver.page_source.lower():
+            log.warning("  Page error detected — refreshing...")
+            self.driver.refresh()
+            time.sleep(4)
 
         # Scroll to trigger lazy load
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
@@ -201,12 +207,15 @@ class NaukriScraper:
 
         jobs = []
 
-        # Try multiple card selectors — Naukri's DOM varies across page types
+        # Try multiple card selectors — Naukri's DOM varies across deployments
         card_selectors = [
             "div.srp-jobtuple-wrapper",
+            "div.cust-job-tuple",
             "article.jobTuple",
             "div[class*='jobTuple']",
             "article[class*='jobTuple']",
+            "div[class*='cust-job-tuple']",
+            "li[class*='srp-jobtuple']",
         ]
         cards = []
         for sel in card_selectors:
@@ -220,43 +229,57 @@ class NaukriScraper:
 
         for card in cards:
             try:
-                title_el = card.find_element(By.CSS_SELECTOR, "a.title, .row1 a.title")
+                # Title — try modern selectors first, fall back to older ones
+                title_el = None
+                for t_sel in ["a.title", ".row1 a.title", "a[class*='title']", "a.jobTitle"]:
+                    try:
+                        title_el = card.find_element(By.CSS_SELECTOR, t_sel)
+                        break
+                    except NoSuchElementException:
+                        continue
+                if title_el is None:
+                    continue
                 title = title_el.text.strip()
                 job_url = title_el.get_attribute("href")
 
-                company = card.find_element(
-                    By.CSS_SELECTOR, "a.subTitle, .comp-name"
-                ).text.strip()
+                # Company
+                company = ""
+                for c_sel in ["a.subTitle", ".comp-name", "a[class*='comp-name']", ".companyInfo a"]:
+                    try:
+                        company = card.find_element(By.CSS_SELECTOR, c_sel).text.strip()
+                        break
+                    except NoSuchElementException:
+                        continue
 
                 loc_text = ""
                 try:
-                    loc_text = card.find_element(By.CSS_SELECTOR, ".locWdth, .location").text.strip()
+                    loc_text = card.find_element(By.CSS_SELECTOR, ".locWdth, .location, .loc, span[class*='loc']").text.strip()
                 except NoSuchElementException:
                     loc_text = location
 
                 salary_text = ""
                 salary_lpa = None
                 try:
-                    salary_text = card.find_element(By.CSS_SELECTOR, ".salary, .sal").text.strip()
+                    salary_text = card.find_element(By.CSS_SELECTOR, ".salary, .sal, span[class*='sal']").text.strip()
                     salary_lpa = self._extract_lpa(salary_text)
                 except NoSuchElementException:
                     pass
 
                 exp_text = ""
                 try:
-                    exp_text = card.find_element(By.CSS_SELECTOR, ".exp, .experience").text.strip()
+                    exp_text = card.find_element(By.CSS_SELECTOR, ".exp, .experience, span[class*='exp']").text.strip()
                 except NoSuchElementException:
                     pass
 
                 posted = ""
                 try:
-                    posted = card.find_element(By.CSS_SELECTOR, ".type-dt, .posted-update").text.strip()
+                    posted = card.find_element(By.CSS_SELECTOR, ".type-dt, .posted-update, span[class*='posted']").text.strip()
                 except NoSuchElementException:
                     pass
 
                 desc_snippet = ""
                 try:
-                    desc_snippet = card.find_element(By.CSS_SELECTOR, ".job-description, .jd-desc").text.strip()
+                    desc_snippet = card.find_element(By.CSS_SELECTOR, ".job-description, .jd-desc, .job-desc").text.strip()
                 except NoSuchElementException:
                     pass
 

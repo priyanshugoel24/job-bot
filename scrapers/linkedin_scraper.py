@@ -9,7 +9,6 @@ Usage:
 """
 
 import time
-import json
 import re
 import logging
 from datetime import datetime
@@ -22,7 +21,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import (
-    TimeoutException, NoSuchElementException, WebDriverException
+    TimeoutException, NoSuchElementException
 )
 
 import sys
@@ -159,7 +158,12 @@ class LinkedInScraper:
             # Check for CAPTCHA or verification
             if "challenge" in self.driver.current_url or "checkpoint" in self.driver.current_url:
                 log.warning("LinkedIn is asking for verification. Please complete it manually.")
-                input("Complete the LinkedIn verification in the browser, then press Enter here...")
+                try:
+                    input("Complete the LinkedIn verification in the browser, then press Enter here...")
+                except EOFError:
+                    log.warning("Non-interactive shell — waiting 60s for manual verification..."
+                                " Open the browser and complete it now.")
+                    time.sleep(60)
 
             if "feed" in self.driver.current_url or "mynetwork" in self.driver.current_url:
                 log.info("Login successful.")
