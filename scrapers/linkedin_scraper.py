@@ -202,7 +202,7 @@ class LinkedInScraper:
         params = {
             "keywords": role.replace(" ", "%20"),
             "location": location.replace(" ", "%20"),
-            "f_E": "1",          # Entry level
+            "f_E": "2",          # Entry level
             "f_TPR": "r604800",  # Past week
             "sortBy": "DD",      # Date posted
         }
