@@ -16,7 +16,10 @@ from flask import Flask, jsonify, request, render_template
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from config import JOBS_FILE, APPLICATIONS_FILE, COVER_LETTERS_DIR, GEMINI_API_KEY, OUTPUT_DIR
+try:
+    from config import JOBS_FILE, APPLICATIONS_FILE, COVER_LETTERS_DIR, GEMINI_API_KEY, OUTPUT_DIR
+except ImportError:
+    from config_production import JOBS_FILE, APPLICATIONS_FILE, COVER_LETTERS_DIR, GEMINI_API_KEY, OUTPUT_DIR
 
 app = Flask(__name__)
 
@@ -206,5 +209,6 @@ def api_scrape_status():
 
 
 if __name__ == "__main__":
-    print(f"\n  Job Bot Dashboard  →  http://localhost:5001\n")
-    app.run(debug=True, port=5001, host="0.0.0.0")
+    port = int(os.environ.get("PORT", 5001))
+    print(f"\n  Job Bot Dashboard  →  http://localhost:{port}\n")
+    app.run(debug=os.environ.get("FLASK_DEBUG", "1") == "1", port=port, host="0.0.0.0")

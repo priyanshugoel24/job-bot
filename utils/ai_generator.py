@@ -25,7 +25,10 @@ from google.genai import types
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from config import GEMINI_API_KEY, PROFILE
+try:
+    from config import GEMINI_API_KEY, PROFILE
+except ImportError:
+    from config_production import GEMINI_API_KEY, PROFILE
 
 log = logging.getLogger("AIGenerator")
 

@@ -1,7 +1,10 @@
 # .gitignore
-config.py          ← contains your passwords + API key
-output/
+config.py          ← contains your passwords + API key (use config_production.py + env vars in prod)
+output/*
+!output/.gitkeep
 __pycache__/
 *.pyc
 chromedriver
 chromedriver.exe
+debug_*.png
+*.pkl
