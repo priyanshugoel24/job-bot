@@ -173,6 +173,32 @@ def api_mark_applied(job_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/sync", methods=["POST"])
+def api_sync():
+    """
+    Push locally-scraped jobs to the live server.
+    Requires the X-Secret header to match the SYNC_SECRET env var.
+
+    Usage (run locally after scraping):
+        curl -X POST https://<your-app>.onrender.com/api/sync \\
+             -H "X-Secret: <your-SYNC_SECRET>" \\
+             -H "Content-Type: application/json" \\
+             -d @output/jobs.json
+    """
+    secret = os.environ.get("SYNC_SECRET", "")
+    if not secret:
+        return jsonify({"error": "SYNC_SECRET env var not set on server"}), 500
+    if request.headers.get("X-Secret", "") != secret:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    jobs = request.get_json(silent=True)
+    if not isinstance(jobs, list):
+        return jsonify({"error": "Body must be a JSON array of jobs"}), 400
+
+    _save(JOBS_FILE, jobs)
+    return jsonify({"ok": True, "synced": len(jobs)})
+
+
 @app.route("/api/scrape", methods=["POST"])
 def api_scrape():
     with _state_lock:

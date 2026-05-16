@@ -7,12 +7,8 @@ services:
     startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 "dashboard.app:app"
     envVars:
       - key: GEMINI_API_KEY
-        sync: false          # set manually in Render dashboard
+        sync: false   # set manually in Render dashboard → Environment
+      - key: SYNC_SECRET
+        sync: false   # any password you choose — protects the /api/sync upload endpoint
       - key: FLASK_DEBUG
         value: "0"
-      - key: OUTPUT_DIR
-        value: /data/output  # points to the persistent disk below
-    disk:
-      name: job-data
-      mountPath: /data
-      sizeGB: 1
